@@ -1,3 +1,4 @@
+import { recommendStorage, recommendVehicle, totalInventoryVolumeCubicFeet } from "../src/calculation-engine.mjs";
 import { ACCESS_OPTIONS, HOUSEHOLD_PRESETS, ITEM_CATALOGUE } from "./data.mjs";
 
 const app = document.querySelector("#app");
