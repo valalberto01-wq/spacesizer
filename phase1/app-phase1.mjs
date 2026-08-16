@@ -45,6 +45,41 @@ function household() {
   return `<section class="screen"><div class="eyebrow">Quick household estimate</div><h1>Choose the closest match.</h1><p class="intro">We will create a typical starting list. You can adjust every item and quantity before calculating.</p><div class="household-list">${HOUSEHOLD_PRESETS.map((preset, index) => `<article class="household-card"><div class="household-icon">${preset.emoji}</div><div><b>${escapeHtml(preset.name)}</b><p>${escapeHtml(preset.description)}</p><button class="add-button" data-preset="${index}">Use this estimate</button></div></article>`).join("")}</div><div class="notice"><b>Every household is different.</b> Check the suggested list and add or remove anything that does not apply.</div></section>`;
 }
 
+function customItem() {
+  return `<section class="screen"><div class="eyebrow">Add a custom item</div><h1>What is missing?</h1><p class="intro">Enter the item’s approximate outside dimensions. SpaceSizer will add its volume to your estimate.</p><form id="customItemForm" class="custom-form"><label class="field-label" for="customName">Item name</label><input id="customName" class="search" maxlength="60" required placeholder="e.g. Floor lamp"><div class="dimension-grid"><div><label class="field-label" for="customLength">Length (cm)</label><input id="customLength" class="search" type="number" min="1" max="1000" required placeholder="60"></div><div><label class="field-label" for="customWidth">Width (cm)</label><input id="customWidth" class="search" type="number" min="1" max="1000" required placeholder="40"></div><div><label class="field-label" for="customHeight">Height (cm)</label><input id="customHeight" class="search" type="number" min="1" max="1000" required placeholder="150"></div></div><label class="field-label" for="customQty">Quantity</label><input id="customQty" class="search" type="number" min="1" max="99" value="1" required><div class="notice"><b>Approximate measurements are fine.</b> Include any packaging and use the item’s widest points.</div><button class="button button-primary custom-submit" type="submit">Add to my list</button></form></section>`;
+}
+
+function addCustomItem(form) {
+  const data = new FormData(form);
+  const name = String(data.get("name") || document.querySelector("#customName").value).trim();
+  const length = Number(document.querySelector("#customLength").value);
+  const width = Number(document.querySelector("#customWidth").value);
+  const height = Number(document.querySelector("#customHeight").value);
+  const qty = Number(document.querySelector("#customQty").value);
+  if (!name || !length || !width || !height || !qty) return;
+  const cuft = (length * width * height) / 28316.8466;
+  const existing = state.inventory.find(item => item.name.toLowerCase() === name.toLowerCase());
+  if (existing) existing.qty += qty;
+  else state.inventory.push({ name, cat: "Custom items", cuft, qty });
+  go("review");
+}
+
+function saveEstimate() {
+  const payload = { inventory: state.inventory, access: state.access, savedAt: new Date().toISOString() };
+  localStorage.setItem("spacesizer-estimate", JSON.stringify(payload));
+  alert("Your estimate has been saved on this device.");
+}
+
+function loadEstimate() {
+  try {
+    const saved = JSON.parse(localStorage.getItem("spacesizer-estimate"));
+    if (!saved?.inventory?.length) return;
+    state.inventory = saved.inventory;
+    state.access = saved.access || "some";
+    go("review");
+  } catch { localStorage.removeItem("spacesizer-estimate"); }
+}
+
 function usePreset(index) {
   state.inventory = HOUSEHOLD_PRESETS[index].items.map(([name, qty]) => {
     const source = itemCatalogue.find(item => item.name === name);
@@ -135,6 +170,9 @@ function bind() {
     if (action === "result") go("result");
     if (action === "edit") go("review");
     if (action === "share") shareResult();
+    if (action === "custom-item") go("custom");
+    if (action === "save-estimate") saveEstimate();
+    if (action === "load-estimate") loadEstimate();
     if (action === "provider-search") searchProviders();
     if (action === "provider-switch") { state.providerType = state.providerType === "storage" ? "transport" : "storage"; render(); }
     if (action === "copy-summary") copyText(providerSummary(), "Your recommendation has been copied.");
@@ -149,14 +187,25 @@ function bind() {
   if (location) location.addEventListener("input", event => { state.location = event.target.value; });
   const country = document.querySelector("#country");
   if (country) country.addEventListener("change", event => { state.country = event.target.value; });
+  const customForm = document.querySelector("#customItemForm");
+  if (customForm) customForm.addEventListener("submit", event => { event.preventDefault(); addCustomItem(customForm); });
   const search = document.querySelector("#search");
   if (search) search.addEventListener("input", event => { state.search = event.target.value; render(); document.querySelector("#search")?.focus(); });
 }
 
 function render() {
   backButton.classList.toggle("hidden", state.screen === "welcome");
-  progressLabel.textContent = ({ welcome: "Start", household: "Quick start", catalogue: "1 / 4", boxes: "1 / 4", review: "2 / 4", result: "3 / 4", provider: "4 / 4" })[state.screen];
-  app.innerHTML = ({ welcome, household, catalogue, boxes: () => catalogue(true), review, result, provider })[state.screen]();
+  progressLabel.textContent = ({ welcome: "Start", household: "Quick start", catalogue: "1 / 4", boxes: "1 / 4", custom: "Custom item", review: "2 / 4", result: "3 / 4", provider: "4 / 4" })[state.screen];
+  app.innerHTML = ({ welcome, household, catalogue, boxes: () => catalogue(true), custom: customItem, review, result, provider })[state.screen]();
+  if (state.screen === "catalogue") {
+    document.querySelector(".item-list").insertAdjacentHTML("beforebegin", `<button class="custom-item-button" data-action="custom-item"><span>＋</span><span><b>Can’t find an item?</b><small>Add it using approximate measurements.</small></span><strong>→</strong></button>`);
+  }
+  if (state.screen === "result") {
+    document.querySelector(".result-actions").insertAdjacentHTML("afterbegin", `<button class="button button-secondary" data-action="save-estimate">Save this estimate</button>`);
+  }
+  if (state.screen === "welcome" && localStorage.getItem("spacesizer-estimate")) {
+    document.querySelector(".hero-actions").insertAdjacentHTML("afterbegin", `<button class="button saved-estimate" data-action="load-estimate">Continue my saved estimate</button>`);
+  }
   const transportNote = document.querySelector('[data-provider="transport"] small');
   if (transportNote) transportNote.textContent = "Search all nearby man-and-van, mover and removal services.";
   if (state.screen === "provider" && state.providerType === "transport") {
