@@ -7,7 +7,8 @@ const progressLabel = document.querySelector("#progressLabel");
 const itemCatalogue = ITEM_CATALOGUE;
 const accessOptions = ACCESS_OPTIONS;
 
-const state = { screen: "welcome", history: [], inventory: [], category: "All", search: "", access: "some" };
+const state = { screen: "welcome", history: [], inventory: [], category: "All", search: "", access: "some", providerType: "storage", country: "United Kingdom", location: "" };
+const countries = ["United Kingdom", "Ireland", "United States", "Canada", "Australia", "New Zealand", "France", "Germany", "Spain", "Portugal", "Italy", "Netherlands", "Belgium", "Switzerland", "Austria", "Denmark", "Sweden", "Norway", "Finland", "Poland", "Czechia", "Greece", "Turkey", "United Arab Emirates", "South Africa", "India", "Singapore", "Malaysia", "Brazil", "Mexico", "Other"];
 
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
@@ -70,7 +71,49 @@ function result() {
   const cubicFeet = totalInventoryVolumeCubicFeet(state.inventory);
   const storageLabel = storage.type === "locker" ? "Compact locker" : storage.label;
   const explanation = storage.type === "locker" ? `Your selected boxes and bags fit within a locker based on its actual 1 m × 1 m × 1 m internal dimensions.` : `${storage.label} is the practical starting point for your belongings and your “${accessOptions[state.access].label.toLowerCase()}” preference.`;
-  return `<section class="screen"><div class="eyebrow">Step 3 of 3 · Your result</div><h1>Your practical starting point.</h1><div class="result-card"><small>Recommended storage</small><div class="result-size">${escapeHtml(storageLabel)}</div><div class="result-copy">${escapeHtml(explanation)}</div><div class="result-facts"><div class="fact"><small>Selected items</small><b>${totalItems()}</b></div><div class="fact"><small>Estimated volume</small><b>${Math.round(cubicFeet)} cu ft</b></div></div></div><div class="vehicle-card"><div class="vehicle-icon">${vehicleEmoji(vehicle.id)}</div><div><small>Suggested vehicle</small><b>${escapeHtml(vehicle.label)}</b><small>${escapeHtml(vehicle.guidance)}</small></div></div><div class="notice"><b>Estimate only.</b> The final fit depends on dismantling, stacking, item shapes and the exact internal dimensions available.</div><div class="result-actions"><button class="button button-primary" data-action="share">Share my result</button><button class="button button-quiet" data-action="edit">Adjust my items</button><button class="button button-secondary" data-action="restart">Start again</button></div></section>`;
+  return `<section class="screen"><div class="eyebrow">Step 3 of 4 · Your result</div><h1>Your practical starting point.</h1><div class="result-card"><small>Recommended storage</small><div class="result-size">${escapeHtml(storageLabel)}</div><div class="result-copy">${escapeHtml(explanation)}</div><div class="result-facts"><div class="fact"><small>Selected items</small><b>${totalItems()}</b></div><div class="fact"><small>Estimated volume</small><b>${Math.round(cubicFeet)} cu ft</b></div></div></div><div class="vehicle-card"><div class="vehicle-icon">${vehicleEmoji(vehicle.id)}</div><div><small>Suggested vehicle</small><b>${escapeHtml(vehicle.label)}</b><small>${escapeHtml(vehicle.guidance)}</small></div></div><section class="next-step"><div class="eyebrow">Next step</div><h2>What would you like to find?</h2><button class="provider-choice" data-provider="storage"><span>🏢</span><span><b>Find storage</b><small>Search near you using your recommended size.</small></span><strong>→</strong></button><button class="provider-choice" data-provider="transport"><span>🚐</span><span><b>Find transport or movers</b><small>Search using your suggested vehicle and load.</small></span><strong>→</strong></button></section><div class="notice"><b>Estimate only.</b> The final fit depends on dismantling, stacking, item shapes and the exact internal dimensions available.</div><div class="result-actions"><button class="button button-primary" data-action="share">Share my result</button><button class="button button-quiet" data-action="edit">Adjust my items</button><button class="button button-secondary" data-action="restart">Start again</button></div></section>`;
+}
+
+function squareMetres(storage) {
+  const squareFeet = storage.type === "locker" ? 10 : storage.sizeSqFt;
+  return (squareFeet * 0.092903).toFixed(1);
+}
+
+function transportTerm(country) {
+  if (["United Kingdom", "Ireland"].includes(country)) return "man and van";
+  if (["Australia", "New Zealand"].includes(country)) return "removalist";
+  if (["United States", "Canada"].includes(country)) return "moving company";
+  return "moving service";
+}
+
+function provider() {
+  const storage = recommendStorage({ inventory: state.inventory, access: state.access });
+  const vehicle = recommendVehicle(storage);
+  const isStorage = state.providerType === "storage";
+  const storageLabel = storage.type === "locker" ? "Compact locker" : storage.label;
+  return `<section class="screen"><div class="eyebrow">Step 4 of 4</div><h1>${isStorage ? "Find storage near you." : "Find transport or movers."}</h1><p class="intro">Enter your location and we will create a local search using your SpaceSizer recommendation.</p><div class="provider-recap"><div><small>Storage</small><b>${escapeHtml(storageLabel)} (${squareMetres(storage)} m²)</b></div><div><small>Vehicle guide</small><b>${escapeHtml(vehicle.label)}</b></div></div><label class="field-label" for="country">Country</label><select id="country" class="search">${countries.map(country => `<option ${country === state.country ? "selected" : ""}>${escapeHtml(country)}</option>`).join("")}</select><label class="field-label" for="location">Town, city, postcode or ZIP code</label><input id="location" class="search" autocomplete="postal-code" placeholder="e.g. Wimbledon or SW19 5BA" value="${escapeHtml(state.location)}"><p class="privacy-note">Your location is used only to open relevant local results. SpaceSizer does not save it.</p><button class="button button-primary provider-search" data-action="provider-search">${isStorage ? "Search local storage" : "Search local transport and movers"}</button><button class="button button-quiet provider-search" data-action="provider-switch">${isStorage ? "I also need transport" : "I also need storage"}</button><div class="provider-summary"><b>What to tell the provider</b><p>${isStorage ? `SpaceSizer estimates approximately ${escapeHtml(storageLabel)} (${squareMetres(storage)} m²) of storage.` : `SpaceSizer suggests a ${escapeHtml(vehicle.label)} for this load.`}</p><button class="add-button" data-action="copy-summary">Copy recommendation</button></div><div class="notice"><b>Independent search.</b> SpaceSizer does not currently rank, endorse or guarantee external providers. Confirm prices, availability and suitability directly.</div></section>`;
+}
+
+function providerSummary() {
+  const storage = recommendStorage({ inventory: state.inventory, access: state.access });
+  const vehicle = recommendVehicle(storage);
+  const label = storage.type === "locker" ? "Compact locker (1 m × 1 m × 1 m)" : storage.label;
+  return `SpaceSizer estimate\nStorage: ${label} (${squareMetres(storage)} m²)\nSuggested vehicle: ${vehicle.label}\nSelected items: ${totalItems()}\nLocation: ${state.location || "Not entered"}, ${state.country}\n\nEstimate only — confirm the exact fit with the provider.`;
+}
+
+function copyText(text, confirmation) {
+  if (navigator.clipboard) navigator.clipboard.writeText(text).then(() => alert(confirmation));
+  else prompt("Copy this information:", text);
+}
+
+function searchProviders() {
+  const location = state.location.trim();
+  if (!location) return alert("Enter your town, city, postcode or ZIP code first.");
+  const storage = recommendStorage({ inventory: state.inventory, access: state.access });
+  const vehicle = recommendVehicle(storage);
+  const storageLabel = storage.type === "locker" ? "storage locker" : storage.label;
+  const query = state.providerType === "storage" ? `self storage ${location} ${state.country} ${storageLabel}` : `${transportTerm(state.country)} ${location} ${state.country} ${vehicle.label}`;
+  window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`, "_blank", "noopener");
 }
 
 async function shareResult() {
@@ -93,20 +136,28 @@ function bind() {
     if (action === "result") go("result");
     if (action === "edit") go("review");
     if (action === "share") shareResult();
-    if (action === "restart") { Object.assign(state, { screen: "welcome", history: [], inventory: [], category: "All", search: "", access: "some" }); render(); }
+    if (action === "provider-search") searchProviders();
+    if (action === "provider-switch") { state.providerType = state.providerType === "storage" ? "transport" : "storage"; render(); }
+    if (action === "copy-summary") copyText(providerSummary(), "Your recommendation has been copied.");
+    if (action === "restart") { Object.assign(state, { screen: "welcome", history: [], inventory: [], category: "All", search: "", access: "some", providerType: "storage", country: "United Kingdom", location: "" }); render(); }
   }));
   document.querySelectorAll("[data-item]").forEach(button => button.addEventListener("click", () => changeItem(button.dataset.item, Number(button.dataset.change))));
   document.querySelectorAll("[data-category]").forEach(button => button.addEventListener("click", () => { state.category = button.dataset.category; render(); }));
   document.querySelectorAll("[data-access]").forEach(button => button.addEventListener("click", () => { state.access = button.dataset.access; render(); }));
   document.querySelectorAll("[data-preset]").forEach(button => button.addEventListener("click", () => usePreset(Number(button.dataset.preset))));
+  document.querySelectorAll("[data-provider]").forEach(button => button.addEventListener("click", () => { state.providerType = button.dataset.provider; go("provider"); }));
+  const location = document.querySelector("#location");
+  if (location) location.addEventListener("input", event => { state.location = event.target.value; });
+  const country = document.querySelector("#country");
+  if (country) country.addEventListener("change", event => { state.country = event.target.value; });
   const search = document.querySelector("#search");
   if (search) search.addEventListener("input", event => { state.search = event.target.value; render(); document.querySelector("#search")?.focus(); });
 }
 
 function render() {
   backButton.classList.toggle("hidden", state.screen === "welcome");
-  progressLabel.textContent = ({ welcome: "Start", household: "Quick start", catalogue: "1 / 3", boxes: "1 / 3", review: "2 / 3", result: "3 / 3" })[state.screen];
-  app.innerHTML = ({ welcome, household, catalogue, boxes: () => catalogue(true), review, result })[state.screen]();
+  progressLabel.textContent = ({ welcome: "Start", household: "Quick start", catalogue: "1 / 4", boxes: "1 / 4", review: "2 / 4", result: "3 / 4", provider: "4 / 4" })[state.screen];
+  app.innerHTML = ({ welcome, household, catalogue, boxes: () => catalogue(true), review, result, provider })[state.screen]();
   bind();
 }
 
