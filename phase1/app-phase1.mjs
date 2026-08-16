@@ -67,7 +67,12 @@ function addCustomItem(form) {
 function saveEstimate() {
   const payload = { inventory: state.inventory, access: state.access, savedAt: new Date().toISOString() };
   localStorage.setItem("spacesizer-estimate", JSON.stringify(payload));
-  alert("Your estimate has been saved on this device.");
+  const button = document.querySelector('[data-action="save-estimate"]');
+  if (button) {
+    button.textContent = "✓ Result saved on this device";
+    button.classList.add("saved");
+  }
+  alert("Your SpaceSizer result has been saved on this device.");
 }
 
 function loadEstimate() {
@@ -244,7 +249,7 @@ function render() {
     document.querySelector(".item-list").insertAdjacentHTML("beforebegin", `<button class="custom-item-button" data-action="custom-item"><span>＋</span><span><b>Can’t find an item?</b><small>Add it using approximate measurements.</small></span><strong>→</strong></button>`);
   }
   if (state.screen === "result") {
-    document.querySelector(".result-actions").insertAdjacentHTML("afterbegin", `<button class="button button-secondary" data-action="save-estimate">Save this estimate</button>`);
+    document.querySelector(".next-step").insertAdjacentHTML("beforebegin", `<section class="save-result-card"><div><b>Keep this result</b><small>Save it on this device and continue later—no account needed.</small></div><button class="button button-primary" data-action="save-estimate">Save result on this device</button></section>`);
   }
   if (state.screen === "welcome" && localStorage.getItem("spacesizer-estimate")) {
     document.querySelector(".hero-actions").insertAdjacentHTML("afterbegin", `<button class="button saved-estimate" data-action="load-estimate">Continue my saved estimate</button>`);
