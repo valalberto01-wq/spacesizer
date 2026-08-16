@@ -1,5 +1,5 @@
 import { recommendStorage, recommendVehicle, totalInventoryVolumeCubicFeet } from "../src/calculation-engine.mjs";
-import { ACCESS_OPTIONS, ITEM_CATALOGUE } from "./data.mjs";
+import { ACCESS_OPTIONS, HOUSEHOLD_PRESETS, ITEM_CATALOGUE } from "./data.mjs";
 
 const app = document.querySelector("#app");
 const backButton = document.querySelector("#backButton");
@@ -37,7 +37,19 @@ function go(screen) {
 }
 
 function welcome() {
-  return `<section class="hero"><div class="eyebrow">Storage and moving, made clearer</div><h1>Know what fits before you book.</h1><p>Select what you are storing. SpaceSizer will recommend a practical storage size and the right vehicle guide.</p><div class="result-preview"><small>Your result will include</small><div class="preview-size">One clear size</div><div class="trust-row"><span>Storage estimate</span><span>Vehicle guide</span><span>No account needed</span></div></div><div class="hero-actions"><button class="button button-primary" data-action="start">Choose my items</button><button class="button button-secondary" data-action="boxes">I only have boxes</button></div></section>`;
+  return `<section class="hero"><div class="eyebrow">Storage and moving, made clearer</div><h1>Know what fits before you book.</h1><p>Select what you are storing. SpaceSizer will recommend a practical storage size and the right vehicle guide.</p><div class="result-preview"><small>Your result will include</small><div class="preview-size">One clear size</div><div class="trust-row"><span>Storage estimate</span><span>Vehicle guide</span><span>No account needed</span></div></div><div class="hero-actions"><button class="button button-primary" data-action="start">Choose my items</button><button class="button button-secondary" data-action="household">Household estimate</button><button class="button button-secondary" data-action="boxes">I only have boxes</button></div></section>`;
+}
+
+function household() {
+  return `<section class="screen"><div class="eyebrow">Quick household estimate</div><h1>Choose the closest match.</h1><p class="intro">We will create a typical starting list. You can adjust every item and quantity before calculating.</p><div class="household-list">${HOUSEHOLD_PRESETS.map((preset, index) => `<article class="household-card"><div class="household-icon">${preset.emoji}</div><div><b>${escapeHtml(preset.name)}</b><p>${escapeHtml(preset.description)}</p><button class="add-button" data-preset="${index}">Use this estimate</button></div></article>`).join("")}</div><div class="notice"><b>Every household is different.</b> Check the suggested list and add or remove anything that does not apply.</div></section>`;
+}
+
+function usePreset(index) {
+  state.inventory = HOUSEHOLD_PRESETS[index].items.map(([name, qty]) => {
+    const source = itemCatalogue.find(item => item.name === name);
+    return { name, cat: source.cat, cuft: source.cuft, qty };
+  });
+  go("review");
 }
 
 function catalogue(boxesOnly = false) {
@@ -75,6 +87,7 @@ function bind() {
   document.querySelectorAll("[data-action]").forEach(button => button.addEventListener("click", () => {
     const action = button.dataset.action;
     if (action === "start") { state.category = "All"; go("catalogue"); }
+    if (action === "household") go("household");
     if (action === "boxes") { state.category = "All"; go("boxes"); }
     if (action === "review" && totalItems()) go("review");
     if (action === "result") go("result");
@@ -85,14 +98,15 @@ function bind() {
   document.querySelectorAll("[data-item]").forEach(button => button.addEventListener("click", () => changeItem(button.dataset.item, Number(button.dataset.change))));
   document.querySelectorAll("[data-category]").forEach(button => button.addEventListener("click", () => { state.category = button.dataset.category; render(); }));
   document.querySelectorAll("[data-access]").forEach(button => button.addEventListener("click", () => { state.access = button.dataset.access; render(); }));
+  document.querySelectorAll("[data-preset]").forEach(button => button.addEventListener("click", () => usePreset(Number(button.dataset.preset))));
   const search = document.querySelector("#search");
   if (search) search.addEventListener("input", event => { state.search = event.target.value; render(); document.querySelector("#search")?.focus(); });
 }
 
 function render() {
   backButton.classList.toggle("hidden", state.screen === "welcome");
-  progressLabel.textContent = ({ welcome: "Start", catalogue: "1 / 3", boxes: "1 / 3", review: "2 / 3", result: "3 / 3" })[state.screen];
-  app.innerHTML = ({ welcome, catalogue, boxes: () => catalogue(true), review, result })[state.screen]();
+  progressLabel.textContent = ({ welcome: "Start", household: "Quick start", catalogue: "1 / 3", boxes: "1 / 3", review: "2 / 3", result: "3 / 3" })[state.screen];
+  app.innerHTML = ({ welcome, household, catalogue, boxes: () => catalogue(true), review, result })[state.screen]();
   bind();
 }
 
