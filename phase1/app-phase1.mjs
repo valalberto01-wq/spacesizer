@@ -1,4 +1,3 @@
-import { recommendStorage, recommendVehicle, totalInventoryVolumeCubicFeet } from "../src/calculation-engine.mjs";
 import { ACCESS_OPTIONS, HOUSEHOLD_PRESETS, ITEM_CATALOGUE } from "./data.mjs";
 
 const app = document.querySelector("#app");
@@ -80,10 +79,10 @@ function squareMetres(storage) {
 }
 
 function transportTerm(country) {
-  if (["United Kingdom", "Ireland"].includes(country)) return "man and van";
-  if (["Australia", "New Zealand"].includes(country)) return "removalist";
-  if (["United States", "Canada"].includes(country)) return "moving company";
-  return "moving service";
+  if (["United Kingdom", "Ireland"].includes(country)) return "man and van movers removal services";
+  if (["Australia", "New Zealand"].includes(country)) return "removalists movers moving services";
+  if (["United States", "Canada"].includes(country)) return "moving companies movers removal services";
+  return "moving services movers removal companies";
 }
 
 function provider() {
@@ -110,9 +109,8 @@ function searchProviders() {
   const location = state.location.trim();
   if (!location) return alert("Enter your town, city, postcode or ZIP code first.");
   const storage = recommendStorage({ inventory: state.inventory, access: state.access });
-  const vehicle = recommendVehicle(storage);
   const storageLabel = storage.type === "locker" ? "storage locker" : storage.label;
-  const query = state.providerType === "storage" ? `self storage ${location} ${state.country} ${storageLabel}` : `${transportTerm(state.country)} ${location} ${state.country} ${vehicle.label}`;
+  const query = state.providerType === "storage" ? `self storage ${location} ${state.country} ${storageLabel}` : `${transportTerm(state.country)} ${location} ${state.country}`;
   window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`, "_blank", "noopener");
 }
 
@@ -158,6 +156,11 @@ function render() {
   backButton.classList.toggle("hidden", state.screen === "welcome");
   progressLabel.textContent = ({ welcome: "Start", household: "Quick start", catalogue: "1 / 4", boxes: "1 / 4", review: "2 / 4", result: "3 / 4", provider: "4 / 4" })[state.screen];
   app.innerHTML = ({ welcome, household, catalogue, boxes: () => catalogue(true), review, result, provider })[state.screen]();
+  const transportNote = document.querySelector('[data-provider="transport"] small');
+  if (transportNote) transportNote.textContent = "Search all nearby man-and-van, mover and removal services.";
+  if (state.screen === "provider" && state.providerType === "transport") {
+    document.querySelector(".intro").textContent = "Enter your location to see all relevant local transport and removal services. The vehicle result is guidance only and does not restrict the search.";
+  }
   bind();
 }
 
