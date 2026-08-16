@@ -136,6 +136,37 @@ function providerSummary() {
   return `SpaceSizer estimate\nStorage: ${label} (${squareMetres(storage)} m²)\nSuggested vehicle: ${vehicle.label}\nSelected items: ${totalItems()}\nLocation: ${state.location || "Not entered"}, ${state.country}\n\nEstimate only — confirm the exact fit with the provider.`;
 }
 
+function enquiry() {
+  const storage = recommendStorage({ inventory: state.inventory, access: state.access });
+  const vehicle = recommendVehicle(storage);
+  const label = storage.type === "locker" ? "Compact locker (1 m × 1 m × 1 m)" : storage.label;
+  return `<section class="screen"><div class="eyebrow">Send a SpaceSizer enquiry</div><h1>Contact your chosen company.</h1><p class="intro">Enter the company’s contact details and your own. SpaceSizer will prepare a branded request containing your estimate.</p><div class="provider-recap"><div><small>Storage estimate</small><b>${escapeHtml(label)}</b></div><div><small>Vehicle guidance</small><b>${escapeHtml(vehicle.label)}</b></div></div><form id="enquiryForm" class="custom-form"><label class="field-label" for="companyName">Company name</label><input id="companyName" class="search" required maxlength="80" placeholder="Chosen company"><div class="enquiry-method"><button type="button" class="method-card active" data-method="email">✉️ Email</button><button type="button" class="method-card" data-method="whatsapp">💬 WhatsApp</button></div><div id="emailField"><label class="field-label" for="companyEmail">Company email address</label><input id="companyEmail" class="search" type="email" placeholder="enquiries@company.co.uk"></div><div id="whatsappField" hidden><label class="field-label" for="companyPhone">Company WhatsApp number</label><input id="companyPhone" class="search" type="tel" placeholder="e.g. +44 7700 900000"></div><h2 class="form-section-title">Your details</h2><label class="field-label" for="customerName">Your name</label><input id="customerName" class="search" required maxlength="80"><label class="field-label" for="customerEmail">Your email</label><input id="customerEmail" class="search" type="email" required><label class="field-label" for="customerPhone">Your telephone number</label><input id="customerPhone" class="search" type="tel" required><label class="field-label" for="moveDate">Preferred date</label><input id="moveDate" class="search" type="date"><label class="field-label" for="collectionLocation">Collection or storage location</label><input id="collectionLocation" class="search" placeholder="Town or postcode" value="${escapeHtml(state.location)}"><label class="field-label" for="enquiryNotes">Anything else the company should know?</label><textarea id="enquiryNotes" class="search enquiry-notes" maxlength="1000" placeholder="Access, floors, parking, preferred contact time…"></textarea><label class="consent-row"><input id="enquiryConsent" type="checkbox" required><span>I agree to share these details with my chosen company. I understand that the company—not SpaceSizer—will respond with availability, suitability and pricing.</span></label><div class="notice"><b>Sent directly by you.</b> SpaceSizer prepares the request but does not store it or guarantee the provider’s service.</div><button class="button button-primary custom-submit" type="submit">Review and send enquiry</button></form></section>`;
+}
+
+function buildEnquiryMessage() {
+  const storage = recommendStorage({ inventory: state.inventory, access: state.access });
+  const vehicle = recommendVehicle(storage);
+  const label = storage.type === "locker" ? "Compact locker (1 m × 1 m × 1 m)" : storage.label;
+  const value = id => document.querySelector(`#${id}`)?.value.trim() || "Not provided";
+  return `SpaceSizer customer enquiry\n\nCompany: ${value("companyName")}\nCustomer: ${value("customerName")}\nEmail: ${value("customerEmail")}\nTelephone: ${value("customerPhone")}\nPreferred date: ${value("moveDate")}\nLocation: ${value("collectionLocation")}\n\nSPACE ESTIMATE\nRecommended storage: ${label} (${squareMetres(storage)} m²)\nVehicle guidance: ${vehicle.label}\nSelected belongings: ${totalItems()} items\nEstimated volume: ${Math.round(totalInventoryVolumeCubicFeet(state.inventory))} cu ft\nAccess preference: ${accessOptions[state.access].label}\n\nCustomer notes: ${value("enquiryNotes")}\n\nEstimate prepared using SpaceSizer — https://spacesizer.co.uk\nThe estimate is guidance only. Please confirm suitability, availability and pricing directly with the customer.`;
+}
+
+function sendEnquiry(form) {
+  if (!form.reportValidity()) return;
+  const method = form.dataset.method || "email";
+  const message = buildEnquiryMessage();
+  const company = document.querySelector("#companyName").value.trim();
+  if (method === "email") {
+    const email = document.querySelector("#companyEmail").value.trim();
+    if (!email) return alert("Enter the company’s email address.");
+    location.href = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(`SpaceSizer enquiry for ${company}`)}&body=${encodeURIComponent(message)}`;
+  } else {
+    const phone = document.querySelector("#companyPhone").value.replace(/[^\d]/g, "");
+    if (!phone) return alert("Enter the company’s WhatsApp number, including its country code.");
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, "_blank", "noopener");
+  }
+}
+
 function copyText(text, confirmation) {
   if (navigator.clipboard) navigator.clipboard.writeText(text).then(() => alert(confirmation));
   else prompt("Copy this information:", text);
@@ -176,6 +207,7 @@ function bind() {
     if (action === "provider-search") searchProviders();
     if (action === "provider-switch") { state.providerType = state.providerType === "storage" ? "transport" : "storage"; render(); }
     if (action === "copy-summary") copyText(providerSummary(), "Your recommendation has been copied.");
+    if (action === "prepare-enquiry") go("enquiry");
     if (action === "restart") { Object.assign(state, { screen: "welcome", history: [], inventory: [], category: "All", search: "", access: "some", providerType: "storage", country: "United Kingdom", location: "" }); render(); }
   }));
   document.querySelectorAll("[data-item]").forEach(button => button.addEventListener("click", () => changeItem(button.dataset.item, Number(button.dataset.change))));
@@ -189,14 +221,25 @@ function bind() {
   if (country) country.addEventListener("change", event => { state.country = event.target.value; });
   const customForm = document.querySelector("#customItemForm");
   if (customForm) customForm.addEventListener("submit", event => { event.preventDefault(); addCustomItem(customForm); });
+  const enquiryForm = document.querySelector("#enquiryForm");
+  if (enquiryForm) {
+    enquiryForm.dataset.method = "email";
+    enquiryForm.addEventListener("submit", event => { event.preventDefault(); sendEnquiry(enquiryForm); });
+    document.querySelectorAll("[data-method]").forEach(button => button.addEventListener("click", () => {
+      enquiryForm.dataset.method = button.dataset.method;
+      document.querySelectorAll("[data-method]").forEach(choice => choice.classList.toggle("active", choice === button));
+      document.querySelector("#emailField").hidden = button.dataset.method !== "email";
+      document.querySelector("#whatsappField").hidden = button.dataset.method !== "whatsapp";
+    }));
+  }
   const search = document.querySelector("#search");
   if (search) search.addEventListener("input", event => { state.search = event.target.value; render(); document.querySelector("#search")?.focus(); });
 }
 
 function render() {
   backButton.classList.toggle("hidden", state.screen === "welcome");
-  progressLabel.textContent = ({ welcome: "Start", household: "Quick start", catalogue: "1 / 4", boxes: "1 / 4", custom: "Custom item", review: "2 / 4", result: "3 / 4", provider: "4 / 4" })[state.screen];
-  app.innerHTML = ({ welcome, household, catalogue, boxes: () => catalogue(true), custom: customItem, review, result, provider })[state.screen]();
+  progressLabel.textContent = ({ welcome: "Start", household: "Quick start", catalogue: "1 / 4", boxes: "1 / 4", custom: "Custom item", review: "2 / 4", result: "3 / 4", provider: "4 / 4", enquiry: "Enquiry" })[state.screen];
+  app.innerHTML = ({ welcome, household, catalogue, boxes: () => catalogue(true), custom: customItem, review, result, provider, enquiry })[state.screen]();
   if (state.screen === "catalogue") {
     document.querySelector(".item-list").insertAdjacentHTML("beforebegin", `<button class="custom-item-button" data-action="custom-item"><span>＋</span><span><b>Can’t find an item?</b><small>Add it using approximate measurements.</small></span><strong>→</strong></button>`);
   }
@@ -205,6 +248,10 @@ function render() {
   }
   if (state.screen === "welcome" && localStorage.getItem("spacesizer-estimate")) {
     document.querySelector(".hero-actions").insertAdjacentHTML("afterbegin", `<button class="button saved-estimate" data-action="load-estimate">Continue my saved estimate</button>`);
+  }
+  if (state.screen === "provider") {
+    const searchButton = document.querySelector('[data-action="provider-search"]');
+    searchButton.insertAdjacentHTML("afterend", `<button class="button send-enquiry-button" data-action="prepare-enquiry">Send my details to a chosen company</button>`);
   }
   const transportNote = document.querySelector('[data-provider="transport"] small');
   if (transportNote) transportNote.textContent = "Search all nearby man-and-van, mover and removal services.";
