@@ -39,3 +39,11 @@ const rows = [
 ];
 
 export const ITEM_CATALOGUE = rows.map(([name, cat, emoji, cuft, note]) => ({ name, cat, emoji, cuft, note }));
+
+export const HOUSEHOLD_PRESETS = [
+  { name: "Typical bedroom", emoji: "🛏️", description: "A double bed, wardrobe, drawers, bedside tables and around 12 boxes.", items: [["Double bed",1],["Wardrobe",1],["Chest of drawers",1],["Bedside table",2],["Medium box",8],["Large box",4]] },
+  { name: "Studio or small flat", emoji: "🏠", description: "Core furniture and boxes from a compact studio home.", items: [["Double bed",1],["Two-seater sofa",1],["Coffee table",1],["TV",1],["TV unit",1],["Dining table",1],["Dining chair",2],["Medium box",12],["Large box",6]] },
+  { name: "One-bedroom home", emoji: "🏡", description: "A practical starting list for a typical one-bedroom home.", items: [["Double bed",1],["Wardrobe",1],["Chest of drawers",1],["Three-seater sofa",1],["Armchair",1],["Coffee table",1],["TV",1],["TV unit",1],["Dining table",1],["Dining chair",4],["Medium box",16],["Large box",8]] },
+  { name: "Two-bedroom home", emoji: "🏘️", description: "Two bedrooms, living furniture, appliances and around 36 boxes.", items: [["Double bed",1],["Single bed",1],["Wardrobe",2],["Chest of drawers",2],["Three-seater sofa",1],["Armchair",2],["Coffee table",1],["TV",2],["TV unit",1],["Dining table",1],["Dining chair",4],["Fridge freezer",1],["Washing machine",1],["Medium box",24],["Large box",12]] },
+  { name: "Three-bedroom home", emoji: "🏠", description: "A larger family household with three bedrooms and around 50 boxes.", items: [["Double bed",2],["Single bed",1],["Wardrobe",3],["Chest of drawers",3],["Three-seater sofa",1],["Two-seater sofa",1],["Armchair",2],["Coffee table",1],["TV",2],["TV unit",1],["Dining table",1],["Dining chair",6],["Fridge freezer",1],["Washing machine",1],["Dishwasher",1],["Medium box",34],["Large box",16]] }
+];
