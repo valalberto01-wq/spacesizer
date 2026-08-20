@@ -105,13 +105,31 @@ function review() {
 
 function vehicleEmoji(id) { return id === "lwb-transit" ? "🚐" : id === "luton" ? "🚚" : "🚛"; }
 
+function storageName(storage) {
+  return storage.type === "locker" ? "Compact locker" : storage.label;
+}
+
+function storageComparisons() {
+  return ["tight", "some", "easy"].map(access => {
+    const storage = recommendStorage({ inventory: state.inventory, access });
+    return { access, storage, option: accessOptions[access] };
+  });
+}
+
+function estimatedFill(storage) {
+  if (storage.type === "locker") return Math.min(100, Math.round((storage.volumeCubicFeet / storage.usableVolumeCubicFeet) * 100));
+  return Math.min(100, Math.round((storage.requiredSqFt / storage.sizeSqFt) * 100));
+}
+
 function result() {
   const storage = recommendStorage({ inventory: state.inventory, access: state.access });
   const vehicle = recommendVehicle(storage);
   const cubicFeet = totalInventoryVolumeCubicFeet(state.inventory);
-  const storageLabel = storage.type === "locker" ? "Compact locker" : storage.label;
+  const storageLabel = storageName(storage);
   const explanation = storage.type === "locker" ? `Your selected boxes and bags fit within a locker based on its actual 1 m × 1 m × 1 m internal dimensions.` : `${storage.label} is the practical starting point for your belongings and your “${accessOptions[state.access].label.toLowerCase()}” preference.`;
-  return `<section class="screen"><div class="eyebrow">Step 3 of 4 · Your result</div><h1>Your practical starting point.</h1><div class="result-card"><small>Recommended storage</small><div class="result-size">${escapeHtml(storageLabel)}</div><div class="result-copy">${escapeHtml(explanation)}</div><div class="result-facts"><div class="fact"><small>Selected items</small><b>${totalItems()}</b></div><div class="fact"><small>Estimated volume</small><b>${Math.round(cubicFeet)} cu ft</b></div></div></div><div class="vehicle-card"><div class="vehicle-icon">${vehicleEmoji(vehicle.id)}</div><div><small>Suggested vehicle</small><b>${escapeHtml(vehicle.label)}</b><small>${escapeHtml(vehicle.guidance)}</small></div></div><section class="next-step"><div class="eyebrow">Next step</div><h2>What would you like to find?</h2><button class="provider-choice" data-provider="storage"><span>🏢</span><span><b>Find storage</b><small>Search near you using your recommended size.</small></span><strong>→</strong></button><button class="provider-choice" data-provider="transport"><span>🚐</span><span><b>Find transport or movers</b><small>Search using your suggested vehicle and load.</small></span><strong>→</strong></button></section><div class="notice"><b>Estimate only.</b> The final fit depends on dismantling, stacking, item shapes and the exact internal dimensions available.</div><div class="result-actions"><button class="button button-primary" data-action="share">Share my result</button><button class="button button-quiet" data-action="edit">Adjust my items</button><button class="button button-secondary" data-action="restart">Start again</button></div></section>`;
+  const comparisons = storageComparisons();
+  const alternatives = vehicle.alternatives?.map(item => `<li>${escapeHtml(item)}</li>`).join("") || "";
+  return `<section class="screen"><div class="eyebrow">Step 3 of 4 · Your result</div><h1>Your practical starting point.</h1><div class="result-card"><small>Recommended storage</small><div class="result-size">${escapeHtml(storageLabel)}</div><div class="result-copy">${escapeHtml(explanation)}</div><div class="fill-label"><span>Estimated usable space filled</span><b>${estimatedFill(storage)}%</b></div><div class="fill-track"><span style="width:${estimatedFill(storage)}%"></span></div><div class="result-facts"><div class="fact"><small>Selected items</small><b>${totalItems()}</b></div><div class="fact"><small>Estimated volume</small><b>${Math.round(cubicFeet)} cu ft</b></div></div></div><section class="comparison-section"><h2>Compare your access options</h2><div class="comparison-grid">${comparisons.map(({ access, storage: optionStorage, option }) => `<button class="comparison-card ${state.access === access ? "active" : ""}" data-access-result="${access}"><small>${escapeHtml(option.label)}</small><b>${escapeHtml(storageName(optionStorage))}</b><span>${escapeHtml(option.note)}</span></button>`).join("")}</div></section><div class="vehicle-card"><div class="vehicle-icon">${vehicleEmoji(vehicle.id)}</div><div><small>Suggested vehicle</small><b>${escapeHtml(vehicle.label)}</b><small>${escapeHtml(vehicle.guidance)}</small>${alternatives ? `<details><summary>Other vehicles a remover may suggest</summary><ul>${alternatives}</ul></details>` : ""}<small class="vehicle-confirmation">${escapeHtml(vehicle.confirmation || "Confirm the final vehicle with the chosen company.")}</small></div></div><section class="next-step"><div class="eyebrow">Next step</div><h2>What would you like to find?</h2><button class="provider-choice" data-provider="storage"><span>🏢</span><span><b>Find storage</b><small>Search near you using your recommended size.</small></span><strong>→</strong></button><button class="provider-choice" data-provider="transport"><span>🚐</span><span><b>Find transport or movers</b><small>Search using your suggested vehicle and load.</small></span><strong>→</strong></button></section><div class="notice"><b>Estimate only.</b> The final fit depends on dismantling, stacking, item shapes and the exact internal dimensions available.</div><div class="result-actions"><button class="button button-primary" data-action="share">Share my result</button><button class="button button-quiet" data-action="edit">Adjust my items</button><button class="button button-secondary" data-action="restart">Start again</button></div></section>`;
 }
 
 function squareMetres(storage) {
@@ -218,6 +236,7 @@ function bind() {
   document.querySelectorAll("[data-item]").forEach(button => button.addEventListener("click", () => changeItem(button.dataset.item, Number(button.dataset.change))));
   document.querySelectorAll("[data-category]").forEach(button => button.addEventListener("click", () => { state.category = button.dataset.category; render(); }));
   document.querySelectorAll("[data-access]").forEach(button => button.addEventListener("click", () => { state.access = button.dataset.access; render(); }));
+  document.querySelectorAll("[data-access-result]").forEach(button => button.addEventListener("click", () => { state.access = button.dataset.accessResult; render(); }));
   document.querySelectorAll("[data-preset]").forEach(button => button.addEventListener("click", () => usePreset(Number(button.dataset.preset))));
   document.querySelectorAll("[data-provider]").forEach(button => button.addEventListener("click", () => { state.providerType = button.dataset.provider; go("provider"); }));
   const location = document.querySelector("#location");
