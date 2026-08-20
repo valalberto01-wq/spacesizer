@@ -7,6 +7,7 @@ import {
   totalInventoryVolumeCubicFeet
 } from "../src/calculation-engine.mjs";
 import { storageExampleFor, vehicleExampleFor } from "../phase1/fit-assets.mjs";
+import { localServiceSearchTerm } from "../phase1/provider-search.mjs";
 
 test("calculates inventory volume from quantities", () => {
   assert.equal(
@@ -106,4 +107,11 @@ test("maps each core vehicle recommendation to its approved image", () => {
   assert.match(vehicleExampleFor({ id: "luton" }).image, /luton/);
   assert.match(vehicleExampleFor({ id: "maxi-low-loader" }).image, /maxi-low-loader/);
   assert.match(vehicleExampleFor({ id: "multiple-loads" }).image, /7-5-tonne/);
+});
+
+test("finds generic furniture moving help without advertising marketplaces", () => {
+  const term = localServiceSearchTerm("help", "United Kingdom");
+  assert.match(term, /furniture moving help/);
+  assert.match(term, /loading unloading/);
+  assert.doesNotMatch(term, /taskrabbit|airtasker/i);
 });

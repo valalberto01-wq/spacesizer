@@ -1,6 +1,7 @@
 import { recommendStorage, recommendVehicle, totalInventoryVolumeCubicFeet } from "../src/calculation-engine.mjs";
 import { ACCESS_OPTIONS, HOUSEHOLD_PRESETS, ITEM_CATALOGUE } from "./data.mjs";
 import { storageExampleFor, vehicleExampleFor } from "./fit-assets.mjs";
+import { localServiceSearchTerm } from "./provider-search.mjs";
 
 const app = document.querySelector("#app");
 const backButton = document.querySelector("#backButton");
@@ -187,7 +188,7 @@ function result() {
   const explanation = storage.type === "locker" ? `Your selected boxes and bags fit within a locker based on its actual 1 m × 1 m × 1 m internal dimensions.` : `${storage.label} is the practical starting point for your belongings and your “${accessOptions[state.access].label.toLowerCase()}” preference.`;
   const comparisons = storageComparisons();
   const alternatives = vehicle.alternatives?.map(item => `<li>${escapeHtml(item)}</li>`).join("") || "";
-  return `<section class="screen"><div class="eyebrow">Step 3 of 4 · Your result</div><h1>Your practical starting point.</h1><div class="result-card"><small>Recommended storage</small><div class="result-size">${escapeHtml(storageLabel)}</div><div class="result-copy">${escapeHtml(explanation)}</div><div class="fill-label"><span>Estimated usable space filled</span><b>${estimatedFill(storage)}%</b></div><div class="fill-track"><span style="width:${estimatedFill(storage)}%"></span></div><div class="result-facts"><div class="fact"><small>Selected items</small><b>${totalItems()}</b></div><div class="fact"><small>Estimated volume</small><b>${Math.round(cubicFeet)} cu ft</b></div></div></div>${realisticFitPreview(storage, vehicle)}<section class="comparison-section"><h2>Compare your access options</h2><div class="comparison-grid">${comparisons.map(({ access, storage: optionStorage, option }) => `<button class="comparison-card ${state.access === access ? "active" : ""}" data-access-result="${access}"><small>${escapeHtml(option.label)}</small><b>${escapeHtml(storageName(optionStorage))}</b><span>${escapeHtml(option.note)}</span></button>`).join("")}</div></section><div class="vehicle-card"><div class="vehicle-icon">${vehicleEmoji(vehicle.id)}</div><div><small>Suggested vehicle</small><b>${escapeHtml(vehicle.label)}</b><small>${escapeHtml(vehicle.guidance)}</small>${alternatives ? `<details><summary>Other vehicles a remover may suggest</summary><ul>${alternatives}</ul></details>` : ""}<small class="vehicle-confirmation">${escapeHtml(vehicle.confirmation || "Confirm the final vehicle with the chosen company.")}</small></div></div><section class="next-step"><div class="eyebrow">Next step</div><h2>What would you like to find?</h2><button class="provider-choice" data-provider="storage"><span>🏢</span><span><b>Find storage</b><small>Search near you using your recommended size.</small></span><strong>→</strong></button><button class="provider-choice" data-provider="transport"><span>🚐</span><span><b>Find transport or movers</b><small>Search using your suggested vehicle and load.</small></span><strong>→</strong></button></section><div class="notice"><b>Estimate only.</b> The final fit depends on dismantling, stacking, item shapes and the exact internal dimensions available.</div><div class="result-actions"><button class="button button-primary" data-action="share">Share my result</button><button class="button button-quiet" data-action="edit">Adjust my items</button><button class="button button-secondary" data-action="restart">Start again</button></div></section>`;
+  return `<section class="screen"><div class="eyebrow">Step 3 of 4 · Your result</div><h1>Your practical starting point.</h1><div class="result-card"><small>Recommended storage</small><div class="result-size">${escapeHtml(storageLabel)}</div><div class="result-copy">${escapeHtml(explanation)}</div><div class="fill-label"><span>Estimated usable space filled</span><b>${estimatedFill(storage)}%</b></div><div class="fill-track"><span style="width:${estimatedFill(storage)}%"></span></div><div class="result-facts"><div class="fact"><small>Selected items</small><b>${totalItems()}</b></div><div class="fact"><small>Estimated volume</small><b>${Math.round(cubicFeet)} cu ft</b></div></div></div>${realisticFitPreview(storage, vehicle)}<section class="comparison-section"><h2>Compare your access options</h2><div class="comparison-grid">${comparisons.map(({ access, storage: optionStorage, option }) => `<button class="comparison-card ${state.access === access ? "active" : ""}" data-access-result="${access}"><small>${escapeHtml(option.label)}</small><b>${escapeHtml(storageName(optionStorage))}</b><span>${escapeHtml(option.note)}</span></button>`).join("")}</div></section><div class="vehicle-card"><div class="vehicle-icon">${vehicleEmoji(vehicle.id)}</div><div><small>Suggested vehicle</small><b>${escapeHtml(vehicle.label)}</b><small>${escapeHtml(vehicle.guidance)}</small>${alternatives ? `<details><summary>Other vehicles a remover may suggest</summary><ul>${alternatives}</ul></details>` : ""}<small class="vehicle-confirmation">${escapeHtml(vehicle.confirmation || "Confirm the final vehicle with the chosen company.")}</small></div></div><section class="next-step"><div class="eyebrow">Next step</div><h2>What would you like to find?</h2><button class="provider-choice" data-provider="storage"><span>🏢</span><span><b>Find storage</b><small>Search near you using your recommended size.</small></span><strong>→</strong></button><button class="provider-choice" data-provider="transport"><span>🚐</span><span><b>Find transport or movers</b><small>Search using your suggested vehicle and load.</small></span><strong>→</strong></button><button class="provider-choice" data-provider="help"><span>💪</span><span><b>Find furniture moving help</b><small>Loading, unloading, heavy lifting or dismantling help.</small></span><strong>→</strong></button></section><div class="notice"><b>Estimate only.</b> The final fit depends on dismantling, stacking, item shapes and the exact internal dimensions available.</div><div class="result-actions"><button class="button button-primary" data-action="share">Share my result</button><button class="button button-quiet" data-action="edit">Adjust my items</button><button class="button button-secondary" data-action="restart">Start again</button></div></section>`;
 }
 
 function squareMetres(storage) {
@@ -195,19 +196,17 @@ function squareMetres(storage) {
   return (squareFeet * 0.092903).toFixed(1);
 }
 
-function transportTerm(country) {
-  if (["United Kingdom", "Ireland"].includes(country)) return "man and van movers removal services";
-  if (["Australia", "New Zealand"].includes(country)) return "removalists movers moving services";
-  if (["United States", "Canada"].includes(country)) return "moving companies movers removal services";
-  return "moving services movers removal companies";
-}
-
 function provider() {
   const storage = recommendStorage({ inventory: state.inventory, access: state.access });
   const vehicle = recommendVehicle(storage);
   const isStorage = state.providerType === "storage";
+  const isHelp = state.providerType === "help";
   const storageLabel = storage.type === "locker" ? "Compact locker" : storage.label;
-  return `<section class="screen"><div class="eyebrow">Step 4 of 4</div><h1>${isStorage ? "Find storage near you." : "Find transport or movers."}</h1><p class="intro">Enter your location and we will create a local search using your SpaceSizer recommendation.</p><div class="provider-recap"><div><small>Storage</small><b>${escapeHtml(storageLabel)} (${squareMetres(storage)} m²)</b></div><div><small>Vehicle guide</small><b>${escapeHtml(vehicle.label)}</b></div></div><label class="field-label" for="country">Country</label><select id="country" class="search">${countries.map(country => `<option ${country === state.country ? "selected" : ""}>${escapeHtml(country)}</option>`).join("")}</select><label class="field-label" for="location">Town, city, postcode or ZIP code</label><input id="location" class="search" autocomplete="postal-code" placeholder="e.g. Wimbledon or SW19 5BA" value="${escapeHtml(state.location)}"><p class="privacy-note">Your location is used only to open relevant local results. SpaceSizer does not save it.</p><button class="button button-primary provider-search" data-action="provider-search">${isStorage ? "Search local storage" : "Search local transport and movers"}</button><button class="button button-quiet provider-search" data-action="provider-switch">${isStorage ? "I also need transport" : "I also need storage"}</button><div class="provider-summary"><b>What to tell the provider</b><p>${isStorage ? `SpaceSizer estimates approximately ${escapeHtml(storageLabel)} (${squareMetres(storage)} m²) of storage.` : `SpaceSizer suggests a ${escapeHtml(vehicle.label)} for this load.`}</p><button class="add-button" data-action="copy-summary">Copy recommendation</button></div><div class="notice"><b>Independent search.</b> SpaceSizer does not currently rank, endorse or guarantee external providers. Confirm prices, availability and suitability directly.</div></section>`;
+  const heading = isStorage ? "Find storage near you." : isHelp ? "Find furniture moving help." : "Find transport or movers.";
+  const searchLabel = isStorage ? "Search local storage" : isHelp ? "Search local moving help" : "Search local transport and movers";
+  const switchLabel = isStorage ? "I also need transport" : isHelp ? "I need full transport instead" : "I also need storage";
+  const providerNote = isStorage ? `SpaceSizer estimates approximately ${escapeHtml(storageLabel)} (${squareMetres(storage)} m²) of storage.` : isHelp ? `Ask whether you need labour only or help with transport. Share the item count, access details, stairs and any dismantling required.` : `SpaceSizer suggests a ${escapeHtml(vehicle.label)} for this load.`;
+  return `<section class="screen"><div class="eyebrow">Step 4 of 4</div><h1>${heading}</h1><p class="intro">Enter your location and we will create a local search using your SpaceSizer recommendation.</p><div class="provider-recap"><div><small>Storage</small><b>${escapeHtml(storageLabel)} (${squareMetres(storage)} m²)</b></div><div><small>Vehicle guide</small><b>${escapeHtml(vehicle.label)}</b></div></div><label class="field-label" for="country">Country</label><select id="country" class="search">${countries.map(country => `<option ${country === state.country ? "selected" : ""}>${escapeHtml(country)}</option>`).join("")}</select><label class="field-label" for="location">Town, city, postcode or ZIP code</label><input id="location" class="search" autocomplete="postal-code" placeholder="e.g. Wimbledon or SW19 5BA" value="${escapeHtml(state.location)}"><p class="privacy-note">Your location is used only to open relevant local results. SpaceSizer does not save it.</p><button class="button button-primary provider-search" data-action="provider-search">${searchLabel}</button><button class="button button-quiet provider-search" data-action="provider-switch">${switchLabel}</button><div class="provider-summary"><b>What to tell the provider</b><p>${providerNote}</p><button class="add-button" data-action="copy-summary">Copy recommendation</button></div><div class="notice"><b>Independent search.</b> SpaceSizer does not currently rank, endorse or guarantee external providers. Confirm prices, availability, insurance and suitability directly.</div></section>`;
 }
 
 function providerSummary() {
@@ -258,7 +257,8 @@ function searchProviders() {
   if (!location) return alert("Enter your town, city, postcode or ZIP code first.");
   const storage = recommendStorage({ inventory: state.inventory, access: state.access });
   const storageLabel = storage.type === "locker" ? "storage locker" : storage.label;
-  const query = state.providerType === "storage" ? `self storage ${location} ${state.country} ${storageLabel}` : `${transportTerm(state.country)} ${location} ${state.country}`;
+  const serviceTerm = localServiceSearchTerm(state.providerType, state.country);
+  const query = state.providerType === "storage" ? `${serviceTerm} ${location} ${state.country} ${storageLabel}` : `${serviceTerm} ${location} ${state.country}`;
   window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`, "_blank", "noopener");
 }
 
@@ -286,7 +286,7 @@ function bind() {
     if (action === "save-estimate") saveEstimate();
     if (action === "load-estimate") loadEstimate();
     if (action === "provider-search") searchProviders();
-    if (action === "provider-switch") { state.providerType = state.providerType === "storage" ? "transport" : "storage"; render(); }
+    if (action === "provider-switch") { state.providerType = state.providerType === "storage" ? "transport" : state.providerType === "help" ? "transport" : "storage"; render(); }
     if (action === "copy-summary") copyText(providerSummary(), "Your recommendation has been copied.");
     if (action === "prepare-enquiry") go("enquiry");
     if (action === "restart") { Object.assign(state, { screen: "welcome", history: [], inventory: [], category: "All", search: "", access: "some", providerType: "storage", country: "United Kingdom", location: "" }); render(); }
@@ -348,6 +348,9 @@ function render() {
   if (transportNote) transportNote.textContent = "Search all nearby man-and-van, mover and removal services.";
   if (state.screen === "provider" && state.providerType === "transport") {
     document.querySelector(".intro").textContent = "Enter your location to see all relevant local transport and removal services. The vehicle result is guidance only and does not restrict the search.";
+  }
+  if (state.screen === "provider" && state.providerType === "help") {
+    document.querySelector(".intro").textContent = "Enter your location to find independent help with loading, unloading, heavy lifting, dismantling or moving individual items.";
   }
   bind();
 }
