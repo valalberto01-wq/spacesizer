@@ -70,7 +70,20 @@ test("preserves SpaceSizer vehicle bands", () => {
   assert.equal(recommendVehicle({ type: "unit", sizeSqFt: 100 }).label, "Luton van");
   assert.equal(recommendVehicle({ type: "unit", sizeSqFt: 105 }).label, "Maxi Low Loader");
   assert.equal(recommendVehicle({ type: "unit", sizeSqFt: 125 }).label, "Maxi Low Loader");
-  assert.equal(recommendVehicle({ type: "unit", sizeSqFt: 130 }).label, "More than one vehicle or load");
+  assert.equal(recommendVehicle({ type: "unit", sizeSqFt: 130 }).label, "Professional load assessment");
+});
+
+test("provides wider UK removal vehicle alternatives without replacing the core bands", () => {
+  const small = recommendVehicle({ type: "unit", sizeSqFt: 25 });
+  const medium = recommendVehicle({ type: "unit", sizeSqFt: 75 });
+  const substantial = recommendVehicle({ type: "unit", sizeSqFt: 150 });
+
+  assert.equal(small.label, "Long-wheelbase Transit");
+  assert.ok(small.alternatives.includes("Medium-wheelbase van"));
+  assert.equal(medium.label, "Luton van");
+  assert.ok(medium.alternatives.some((item) => item.includes("tail lift")));
+  assert.ok(substantial.alternatives.includes("7.5-tonne removal lorry"));
+  assert.match(substantial.confirmation, /weight, access, dismantling and packing/);
 });
 
 test("returns no recommendation for an empty inventory", () => {
