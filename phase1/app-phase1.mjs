@@ -1,5 +1,6 @@
 import { recommendStorage, recommendVehicle, totalInventoryVolumeCubicFeet } from "../src/calculation-engine.mjs";
 import { ACCESS_OPTIONS, HOUSEHOLD_PRESETS, ITEM_CATALOGUE } from "./data.mjs";
+import { storageExampleFor, vehicleExampleFor } from "./fit-assets.mjs";
 
 const app = document.querySelector("#app");
 const backButton = document.querySelector("#backButton");
@@ -170,12 +171,10 @@ function packingPreview(storage, vehicle) {
 
 function realisticFitPreview(storage, vehicle) {
   const examples = [];
-  if (storage.type === "unit" && storage.sizeSqFt === 35) {
-    examples.push({ id: "unit", tab: "35 sq ft unit", title: "Example 35 sq ft arrangement", image: "../assets/fit/unit-35-sq-ft.webp?v=2", alt: "Realistic example of furniture and moving boxes arranged inside a 35 square foot storage unit", copy: "Comparable to a carefully packed one-bedroom-home load, depending on item sizes and dismantling." });
-  }
-  if (vehicle.id === "lwb-transit") {
-    examples.push({ id: "vehicle", tab: "LWB Transit", title: "Example LWB Transit load", image: "../assets/fit/vehicle-lwb-transit.webp?v=2", alt: "Realistic example of furniture and moving boxes safely arranged inside a long-wheelbase van", copy: "A representative carefully packed load—not a picture of your exact belongings." });
-  }
+  const storageExample = storageExampleFor(storage);
+  const vehicleExample = vehicleExampleFor(vehicle);
+  if (storageExample) examples.push({ id: "unit", tab: `${storageExample.size} sq ft unit`, title: `Example ${storageExample.size} sq ft arrangement`, image: storageExample.image, alt: `Realistic example of furniture and moving boxes arranged inside a ${storageExample.size} square foot storage unit`, copy: storage.sizeSqFt === storageExample.size ? "A representative load for the recommended unit size." : `The nearest visual example is ${storageExample.size} sq ft; your calculated recommendation is ${storage.sizeSqFt} sq ft.` });
+  if (vehicleExample) examples.push({ id: "vehicle", tab: vehicleExample.label, title: `Example ${vehicleExample.label} load`, image: vehicleExample.image, alt: `Realistic example of furniture and moving boxes safely arranged inside a ${vehicleExample.label}`, copy: "A representative carefully packed load—not a picture of your exact belongings." });
   if (!examples.length) return "";
   return `<section class="photo-fit"><div class="photo-fit-heading"><div><div class="eyebrow">Real-world example</div><h2>What this space can look like</h2></div><span>Illustrative</span></div>${examples.length > 1 ? `<div class="photo-tabs" role="tablist">${examples.map((example, index) => `<button class="${index === 0 ? "active" : ""}" data-fit-view="${example.id}" role="tab">${escapeHtml(example.tab)}</button>`).join("")}</div>` : ""}${examples.map((example, index) => `<article class="photo-stage ${index === 0 ? "active" : ""}" data-fit-stage="${example.id}" ${index === 0 ? "" : "hidden"}><img src="${example.image}" alt="${escapeHtml(example.alt)}" loading="lazy"><div class="photo-caption"><div><b>${escapeHtml(example.title)}</b><p>${escapeHtml(example.copy)}</p></div><span>${example.id === "unit" ? `${estimatedFill(storage)}% estimated use` : "Confirm with remover"}</span></div></article>`).join("")}<p class="photo-disclaimer"><b>Example arrangement only.</b> Your result is calculated from your selected items; the photograph shows comparable contents rather than an exact packing plan.</p></section>`;
 }
