@@ -113,7 +113,9 @@ export function recommendVehicle(storageRecommendation) {
     return {
       id: "lwb-transit",
       label: "Long-wheelbase Transit",
-      guidance: "Suitable for storage loads up to 50 sq ft."
+      guidance: "SpaceSizer's core guide for storage loads up to 50 sq ft.",
+      alternatives: ["Small van for a very light load", "Medium-wheelbase van", "Extra-long-wheelbase van"],
+      confirmation: "Ask the chosen company to confirm usable cubic capacity, payload and access."
     };
   }
 
@@ -121,7 +123,9 @@ export function recommendVehicle(storageRecommendation) {
     return {
       id: "luton",
       label: "Luton van",
-      guidance: "Recommended for loads over 50 sq ft and up to 100 sq ft."
+      guidance: "SpaceSizer's core guide for loads over 50 sq ft and up to 100 sq ft.",
+      alternatives: ["Extra-long-wheelbase van / Maxi Low Loader", "3.5-tonne Luton with tail lift"],
+      confirmation: "Ask the chosen company to confirm usable cubic capacity, payload and access."
     };
   }
 
@@ -129,13 +133,17 @@ export function recommendVehicle(storageRecommendation) {
     return {
       id: "maxi-low-loader",
       label: "Maxi Low Loader",
-      guidance: "Suitable for larger loads up to about 125 sq ft."
+      guidance: "SpaceSizer's core guide for larger loads up to about 125 sq ft.",
+      alternatives: ["3.5-tonne Luton with tail lift", "7.5-tonne removal lorry"],
+      confirmation: "Ask the chosen company to confirm usable cubic capacity, payload and access."
     };
   }
 
   return {
     id: "multiple-loads",
-    label: "More than one vehicle or load",
-    guidance: "This estimate is above the normal 125 sq ft single-load guide."
+    label: "Professional load assessment",
+    guidance: "This estimate is above the normal 125 sq ft single-load guide.",
+    alternatives: ["7.5-tonne removal lorry", "Larger removal lorry", "Multiple vehicles or journeys"],
+    confirmation: "A removal company must assess weight, access, dismantling and packing before confirming the vehicle."
   };
 }
