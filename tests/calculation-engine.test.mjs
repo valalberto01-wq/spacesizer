@@ -109,9 +109,9 @@ test("maps each core vehicle recommendation to its approved image", () => {
   assert.match(vehicleExampleFor({ id: "multiple-loads" }).image, /7-5-tonne/);
 });
 
-test("finds generic furniture moving help without advertising marketplaces", () => {
-  const term = localServiceSearchTerm("help", "United Kingdom");
+test("includes furniture moving help within the main transport search", () => {
+  const term = localServiceSearchTerm("transport", "United Kingdom");
+  assert.match(term, /man and van/);
   assert.match(term, /furniture moving help/);
-  assert.match(term, /loading unloading/);
   assert.doesNotMatch(term, /taskrabbit|airtasker/i);
 });
