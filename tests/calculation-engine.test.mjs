@@ -6,6 +6,7 @@ import {
   recommendVehicle,
   totalInventoryVolumeCubicFeet
 } from "../src/calculation-engine.mjs";
+import { storageExampleFor, vehicleExampleFor } from "../phase1/fit-assets.mjs";
 
 test("calculates inventory volume from quantities", () => {
   assert.equal(
@@ -88,4 +89,21 @@ test("provides wider UK removal vehicle alternatives without replacing the core 
 
 test("returns no recommendation for an empty inventory", () => {
   assert.equal(recommendStorage({ inventory: [] }), null);
+});
+
+test("maps calculated storage sizes to the nearest approved visual band", () => {
+  assert.equal(storageExampleFor({ type: "unit", sizeSqFt: 15 }).size, 15);
+  assert.equal(storageExampleFor({ type: "unit", sizeSqFt: 20 }).size, 25);
+  assert.equal(storageExampleFor({ type: "unit", sizeSqFt: 35 }).size, 35);
+  assert.equal(storageExampleFor({ type: "unit", sizeSqFt: 55 }).size, 75);
+  assert.equal(storageExampleFor({ type: "unit", sizeSqFt: 100 }).size, 100);
+  assert.equal(storageExampleFor({ type: "unit", sizeSqFt: 150 }).size, 125);
+  assert.equal(storageExampleFor({ type: "locker" }), null);
+});
+
+test("maps each core vehicle recommendation to its approved image", () => {
+  assert.match(vehicleExampleFor({ id: "lwb-transit" }).image, /lwb-transit/);
+  assert.match(vehicleExampleFor({ id: "luton" }).image, /luton/);
+  assert.match(vehicleExampleFor({ id: "maxi-low-loader" }).image, /maxi-low-loader/);
+  assert.match(vehicleExampleFor({ id: "multiple-loads" }).image, /7-5-tonne/);
 });
