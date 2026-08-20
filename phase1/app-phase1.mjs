@@ -141,16 +141,31 @@ function packingObjects() {
       if (item.qty > visible) objects.push({ ...item, name: `+${item.qty - visible} ${item.name}`, size: "small", more: true });
       return objects;
     })
-    .slice(0, 18);
+    .slice(0, 12);
+}
+
+function packingShape(item) {
+  const name = item.name.toLowerCase();
+  if (name.includes("sofa") || name.includes("armchair") || name.includes("chair")) return "seating";
+  if (name.includes("bed") || name.includes("mattress")) return "mattress";
+  if (name.includes("wardrobe") || name.includes("drawers") || name.includes("cabinet")) return "cabinet";
+  if (name.includes("box") || name.includes("tool")) return "box";
+  if (name.includes("suitcase") || name.includes("bag")) return "case";
+  if (name.includes("table") || name.includes("desk")) return "table";
+  if (["washing machine", "dishwasher", "fridge freezer", "microwave"].includes(name)) return "appliance";
+  if (name.includes("tv") || name.includes("monitor")) return "screen";
+  if (name.includes("bicycle")) return "bicycle";
+  return "box";
 }
 
 function packingLoadMarkup() {
-  return packingObjects().map(item => `<div class="packing-object ${item.size} ${item.more ? "more" : ""}" title="${escapeHtml(item.name)}"><span>${item.more ? escapeHtml(item.name.split(" ")[0]) : packingIcon(item)}</span><small>${escapeHtml(item.more ? item.name.split(" ").slice(1).join(" ") : item.name)}</small></div>`).join("");
+  return packingObjects().map(item => `<div class="scene-item ${packingShape(item)} ${item.size} ${item.more ? "more" : ""}" title="${escapeHtml(item.name)}"><span>${item.more ? escapeHtml(item.name.split(" ")[0]) : ""}</span><small>${escapeHtml(item.more ? item.name.split(" ").slice(1).join(" ") : item.name)}</small></div>`).join("");
 }
 
 function packingPreview(storage, vehicle) {
   const fill = estimatedFill(storage);
-  return `<section class="packing-preview"><div class="packing-heading"><div><div class="eyebrow">Illustrated fit</div><h2>See how your belongings could fit</h2></div><span>${totalItems()} items</span></div><div class="packing-views"><article class="packing-panel"><div class="packing-panel-title"><div><small>Storage unit</small><b>${escapeHtml(storageName(storage))}</b></div><strong>${fill}% used</strong></div><div class="unit-visual"><div class="unit-depth"></div><div class="packing-load">${packingLoadMarkup()}</div><div class="unit-door"></div></div><div class="visual-capacity"><span style="width:${fill}%"></span></div></article><article class="packing-panel"><div class="packing-panel-title"><div><small>Suggested vehicle</small><b>${escapeHtml(vehicle.label)}</b></div><strong>${fill < 86 ? "Likely one load" : "Confirm load"}</strong></div><div class="van-visual"><div class="van-cab"><span></span></div><div class="van-load">${packingLoadMarkup()}</div><i class="wheel wheel-one"></i><i class="wheel wheel-two"></i></div></article></div><div class="packing-legend">${state.inventory.slice(0, 5).map(item => `<span>${packingIcon(item)} ${escapeHtml(item.name)} × ${item.qty}</span>`).join("")}${state.inventory.length > 5 ? `<span>+ ${state.inventory.length - 5} more types</span>` : ""}</div><p class="packing-disclaimer"><b>Illustrative arrangement.</b> Actual fit depends on exact dimensions, dismantling, stacking, weight, access and safe loading. Your storage or removal company must confirm the final fit.</p></section>`;
+  const load = packingLoadMarkup();
+  return `<section class="fit-preview"><div class="fit-heading"><div><div class="eyebrow">Illustrated fit</div><h2>Picture your space before you book</h2><p>A simplified view using the belongings you selected.</p></div><span>${totalItems()} items</span></div><div class="fit-tabs" role="tablist"><button class="active" data-fit-view="unit" role="tab">Storage unit</button><button data-fit-view="vehicle" role="tab">Removal vehicle</button></div><div class="fit-stage active" data-fit-stage="unit"><div class="stage-summary"><div><small>Recommended space</small><b>${escapeHtml(storageName(storage))}</b></div><strong>${fill}% estimated use</strong></div><div class="unit-scene"><div class="scene-back"><span>YOUR BELONGINGS</span></div><div class="scene-load">${load}</div><div class="scene-floor"></div><div class="scene-door"><i></i><i></i><i></i><i></i><i></i></div></div><div class="capacity-row"><span>Space used</span><div><i style="width:${fill}%"></i></div><b>${fill}%</b></div></div><div class="fit-stage" data-fit-stage="vehicle" hidden><div class="stage-summary"><div><small>Suggested vehicle</small><b>${escapeHtml(vehicle.label)}</b></div><strong>${fill < 86 ? "Likely one carefully packed load" : "Professional confirmation needed"}</strong></div><div class="vehicle-scene"><div class="vehicle-box"><div class="scene-load">${load}</div></div><div class="vehicle-cab"><span></span><i></i></div><div class="vehicle-chassis"></div><div class="vehicle-wheel first"></div><div class="vehicle-wheel second"></div></div></div><div class="fit-inventory"><small>Included in this illustration</small><div>${state.inventory.slice(0, 5).map(item => `<span>${packingIcon(item)} <b>${escapeHtml(item.name)}</b> × ${item.qty}</span>`).join("")}${state.inventory.length > 5 ? `<span><b>+${state.inventory.length - 5}</b> more item types</span>` : ""}</div></div><p class="fit-disclaimer"><b>Illustrative arrangement—not a packing guarantee.</b> Exact fit depends on measurements, dismantling, stacking, weight and safe loading. Confirm with your chosen provider.</p></section>`;
 }
 
 function result() {
@@ -269,6 +284,15 @@ function bind() {
   document.querySelectorAll("[data-category]").forEach(button => button.addEventListener("click", () => { state.category = button.dataset.category; render(); }));
   document.querySelectorAll("[data-access]").forEach(button => button.addEventListener("click", () => { state.access = button.dataset.access; render(); }));
   document.querySelectorAll("[data-access-result]").forEach(button => button.addEventListener("click", () => { state.access = button.dataset.accessResult; render(); }));
+  document.querySelectorAll("[data-fit-view]").forEach(button => button.addEventListener("click", () => {
+    const view = button.dataset.fitView;
+    document.querySelectorAll("[data-fit-view]").forEach(tab => tab.classList.toggle("active", tab === button));
+    document.querySelectorAll("[data-fit-stage]").forEach(stage => {
+      const selected = stage.dataset.fitStage === view;
+      stage.hidden = !selected;
+      stage.classList.toggle("active", selected);
+    });
+  }));
   document.querySelectorAll("[data-preset]").forEach(button => button.addEventListener("click", () => usePreset(Number(button.dataset.preset))));
   document.querySelectorAll("[data-provider]").forEach(button => button.addEventListener("click", () => { state.providerType = button.dataset.provider; go("provider"); }));
   const location = document.querySelector("#location");
