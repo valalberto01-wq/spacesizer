@@ -121,6 +121,38 @@ function estimatedFill(storage) {
   return Math.min(100, Math.round((storage.requiredSqFt / storage.sizeSqFt) * 100));
 }
 
+function packingIcon(item) {
+  const source = itemCatalogue.find(candidate => candidate.name === item.name);
+  if (source?.emoji) return source.emoji;
+  if (item.cat === "Boxes & bags") return "📦";
+  if (item.cat === "Bedroom") return "🛏️";
+  if (item.cat === "Living room") return "🛋️";
+  if (item.cat === "Office") return "🖥️";
+  return "◼";
+}
+
+function packingObjects() {
+  return [...state.inventory]
+    .sort((a, b) => (b.cuft * b.qty) - (a.cuft * a.qty))
+    .flatMap(item => {
+      const visible = Math.min(item.qty, 3);
+      const size = item.cuft >= 35 ? "large" : item.cuft >= 12 ? "medium" : "small";
+      const objects = Array.from({ length: visible }, () => ({ ...item, size }));
+      if (item.qty > visible) objects.push({ ...item, name: `+${item.qty - visible} ${item.name}`, size: "small", more: true });
+      return objects;
+    })
+    .slice(0, 18);
+}
+
+function packingLoadMarkup() {
+  return packingObjects().map(item => `<div class="packing-object ${item.size} ${item.more ? "more" : ""}" title="${escapeHtml(item.name)}"><span>${item.more ? escapeHtml(item.name.split(" ")[0]) : packingIcon(item)}</span><small>${escapeHtml(item.more ? item.name.split(" ").slice(1).join(" ") : item.name)}</small></div>`).join("");
+}
+
+function packingPreview(storage, vehicle) {
+  const fill = estimatedFill(storage);
+  return `<section class="packing-preview"><div class="packing-heading"><div><div class="eyebrow">Illustrated fit</div><h2>See how your belongings could fit</h2></div><span>${totalItems()} items</span></div><div class="packing-views"><article class="packing-panel"><div class="packing-panel-title"><div><small>Storage unit</small><b>${escapeHtml(storageName(storage))}</b></div><strong>${fill}% used</strong></div><div class="unit-visual"><div class="unit-depth"></div><div class="packing-load">${packingLoadMarkup()}</div><div class="unit-door"></div></div><div class="visual-capacity"><span style="width:${fill}%"></span></div></article><article class="packing-panel"><div class="packing-panel-title"><div><small>Suggested vehicle</small><b>${escapeHtml(vehicle.label)}</b></div><strong>${fill < 86 ? "Likely one load" : "Confirm load"}</strong></div><div class="van-visual"><div class="van-cab"><span></span></div><div class="van-load">${packingLoadMarkup()}</div><i class="wheel wheel-one"></i><i class="wheel wheel-two"></i></div></article></div><div class="packing-legend">${state.inventory.slice(0, 5).map(item => `<span>${packingIcon(item)} ${escapeHtml(item.name)} × ${item.qty}</span>`).join("")}${state.inventory.length > 5 ? `<span>+ ${state.inventory.length - 5} more types</span>` : ""}</div><p class="packing-disclaimer"><b>Illustrative arrangement.</b> Actual fit depends on exact dimensions, dismantling, stacking, weight, access and safe loading. Your storage or removal company must confirm the final fit.</p></section>`;
+}
+
 function result() {
   const storage = recommendStorage({ inventory: state.inventory, access: state.access });
   const vehicle = recommendVehicle(storage);
@@ -129,7 +161,7 @@ function result() {
   const explanation = storage.type === "locker" ? `Your selected boxes and bags fit within a locker based on its actual 1 m × 1 m × 1 m internal dimensions.` : `${storage.label} is the practical starting point for your belongings and your “${accessOptions[state.access].label.toLowerCase()}” preference.`;
   const comparisons = storageComparisons();
   const alternatives = vehicle.alternatives?.map(item => `<li>${escapeHtml(item)}</li>`).join("") || "";
-  return `<section class="screen"><div class="eyebrow">Step 3 of 4 · Your result</div><h1>Your practical starting point.</h1><div class="result-card"><small>Recommended storage</small><div class="result-size">${escapeHtml(storageLabel)}</div><div class="result-copy">${escapeHtml(explanation)}</div><div class="fill-label"><span>Estimated usable space filled</span><b>${estimatedFill(storage)}%</b></div><div class="fill-track"><span style="width:${estimatedFill(storage)}%"></span></div><div class="result-facts"><div class="fact"><small>Selected items</small><b>${totalItems()}</b></div><div class="fact"><small>Estimated volume</small><b>${Math.round(cubicFeet)} cu ft</b></div></div></div><section class="comparison-section"><h2>Compare your access options</h2><div class="comparison-grid">${comparisons.map(({ access, storage: optionStorage, option }) => `<button class="comparison-card ${state.access === access ? "active" : ""}" data-access-result="${access}"><small>${escapeHtml(option.label)}</small><b>${escapeHtml(storageName(optionStorage))}</b><span>${escapeHtml(option.note)}</span></button>`).join("")}</div></section><div class="vehicle-card"><div class="vehicle-icon">${vehicleEmoji(vehicle.id)}</div><div><small>Suggested vehicle</small><b>${escapeHtml(vehicle.label)}</b><small>${escapeHtml(vehicle.guidance)}</small>${alternatives ? `<details><summary>Other vehicles a remover may suggest</summary><ul>${alternatives}</ul></details>` : ""}<small class="vehicle-confirmation">${escapeHtml(vehicle.confirmation || "Confirm the final vehicle with the chosen company.")}</small></div></div><section class="next-step"><div class="eyebrow">Next step</div><h2>What would you like to find?</h2><button class="provider-choice" data-provider="storage"><span>🏢</span><span><b>Find storage</b><small>Search near you using your recommended size.</small></span><strong>→</strong></button><button class="provider-choice" data-provider="transport"><span>🚐</span><span><b>Find transport or movers</b><small>Search using your suggested vehicle and load.</small></span><strong>→</strong></button></section><div class="notice"><b>Estimate only.</b> The final fit depends on dismantling, stacking, item shapes and the exact internal dimensions available.</div><div class="result-actions"><button class="button button-primary" data-action="share">Share my result</button><button class="button button-quiet" data-action="edit">Adjust my items</button><button class="button button-secondary" data-action="restart">Start again</button></div></section>`;
+  return `<section class="screen"><div class="eyebrow">Step 3 of 4 · Your result</div><h1>Your practical starting point.</h1><div class="result-card"><small>Recommended storage</small><div class="result-size">${escapeHtml(storageLabel)}</div><div class="result-copy">${escapeHtml(explanation)}</div><div class="fill-label"><span>Estimated usable space filled</span><b>${estimatedFill(storage)}%</b></div><div class="fill-track"><span style="width:${estimatedFill(storage)}%"></span></div><div class="result-facts"><div class="fact"><small>Selected items</small><b>${totalItems()}</b></div><div class="fact"><small>Estimated volume</small><b>${Math.round(cubicFeet)} cu ft</b></div></div></div>${packingPreview(storage, vehicle)}<section class="comparison-section"><h2>Compare your access options</h2><div class="comparison-grid">${comparisons.map(({ access, storage: optionStorage, option }) => `<button class="comparison-card ${state.access === access ? "active" : ""}" data-access-result="${access}"><small>${escapeHtml(option.label)}</small><b>${escapeHtml(storageName(optionStorage))}</b><span>${escapeHtml(option.note)}</span></button>`).join("")}</div></section><div class="vehicle-card"><div class="vehicle-icon">${vehicleEmoji(vehicle.id)}</div><div><small>Suggested vehicle</small><b>${escapeHtml(vehicle.label)}</b><small>${escapeHtml(vehicle.guidance)}</small>${alternatives ? `<details><summary>Other vehicles a remover may suggest</summary><ul>${alternatives}</ul></details>` : ""}<small class="vehicle-confirmation">${escapeHtml(vehicle.confirmation || "Confirm the final vehicle with the chosen company.")}</small></div></div><section class="next-step"><div class="eyebrow">Next step</div><h2>What would you like to find?</h2><button class="provider-choice" data-provider="storage"><span>🏢</span><span><b>Find storage</b><small>Search near you using your recommended size.</small></span><strong>→</strong></button><button class="provider-choice" data-provider="transport"><span>🚐</span><span><b>Find transport or movers</b><small>Search using your suggested vehicle and load.</small></span><strong>→</strong></button></section><div class="notice"><b>Estimate only.</b> The final fit depends on dismantling, stacking, item shapes and the exact internal dimensions available.</div><div class="result-actions"><button class="button button-primary" data-action="share">Share my result</button><button class="button button-quiet" data-action="edit">Adjust my items</button><button class="button button-secondary" data-action="restart">Start again</button></div></section>`;
 }
 
 function squareMetres(storage) {
